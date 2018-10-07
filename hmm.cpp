@@ -1,5 +1,5 @@
 #include "hmm.h"
-#include "viterbi_decoder.h"
+#include "viterbi.h"
 
 #include <iostream>
 #include <algorithm>
@@ -21,12 +21,13 @@ void
 HMM::setup_inital_map_and_observations ( )
 {
 /*
-    5   _ _ _           |
-    4   |         *     |
+
+    5   _ _ _           *(5)
+    4   |       *(4)    |
     3 * |           _ _ |
-    2   |               |    *
+    2   |               |    *(3)
     1   | _ _ _ _ _ _ _ |
-    0           *
+    0           *(2)
       0 1 2 3 4 5 6 7 8 9 10 11
 
     * - observations
@@ -50,8 +51,18 @@ HMM::setup_inital_map_and_observations ( )
     m_observations.emplace_back( m_observations.size( ), GeoCoordinates{0, 3} );
     m_observations.emplace_back( m_observations.size( ), GeoCoordinates{5, 0} );
     m_observations.emplace_back( m_observations.size( ), GeoCoordinates{11, 2} );
-    m_observations.emplace_back( m_observations.size( ), GeoCoordinates{6, 4 } );
-    m_observations.emplace_back( m_observations.size( ), GeoCoordinates{9, 5 } );
+    m_observations.emplace_back( m_observations.size( ), GeoCoordinates{5, 4 } );
+    m_observations.emplace_back( m_observations.size( ), GeoCoordinates{9, 6 } );
+
+// Repeatation
+//    m_observations.emplace_back( m_observations.size( ), GeoCoordinates{9, 5 } );
+//    m_observations.emplace_back( m_observations.size( ), GeoCoordinates{9, 5 } );
+//    m_observations.emplace_back( m_observations.size( ), GeoCoordinates{9, 5 } );
+
+// Return back
+//    m_observations.emplace_back( m_observations.size( ), GeoCoordinates{10, 1 } );
+//    m_observations.emplace_back( m_observations.size( ), GeoCoordinates{0, 0 } );
+
 }
 
 void
@@ -73,17 +84,6 @@ HMM::candidate_selection( )
         // todo: in real case we need to get link in some area instead of taking every link
         for ( const auto& link : links ) {
             auto projection = m_map.get_closest_point( link, obs.observation );
-//            bool is_repeated = false;
-//            for ( auto state: m_hidden_states ) {
-//                if ( state.projection == projection ) {
-//                    is_repeated = true;
-//                    break;
-//                }
-//            }
-
-//            if ( is_repeated ) {
-//                continue;
-//            }
 
             // filter out far candidates
             if ( m_map.get_distance( projection, obs.observation ) <= MAX_DIST ) {
@@ -102,22 +102,20 @@ HMM::candidate_selection( )
     }
 
     print_observation_states( m_observation_states );
-    std::cout << " Candid: " << m_hidden_states.size( ) << std::endl;
+    std::cout << " Candidates: " << m_hidden_states.size( ) << std::endl;
     print_state( m_hidden_states );
 }
 
 void 
 HMM::calculate_emission_probability( )
 {
-    //const double sigma_z = 4.07;
+    // const double sigma_z = 4.07;
     for ( const auto& obs: m_observations )
     {
         auto sigma_z = calculate_sigma( obs);
         sigma_z = sigma_z == 0 ? 0.00001 : sigma_z; // assign small number in case sigma is 0
         sigma_z *= 1.4826;
         for ( auto& state: m_hidden_states ) {
-           // auto projection = m_map.get_closest_point( state.link, obs.observation );
-
             auto dist = m_map.get_distance( obs.observation, state.projection );
 
             auto probability = 1. / ( sigma_z * std::sqrt( 2 * M_PI ) ) *
@@ -151,7 +149,7 @@ HMM::calculate_sigma( const Observation& obs )
 void
 HMM::calculate_transition_probability( )
 {
-    for( int i = 0; i < m_observations.size( ) - 1; ++i ) {
+    for( std::size_t i = 0; i < m_observations.size( ) - 1; ++i ) {
         auto current = m_observations[ i ];
         auto next = m_observations[ i + 1 ];
         auto observation_distance = m_map.get_distance( current.observation, next.observation );
@@ -165,7 +163,10 @@ HMM::calculate_transition_probability( )
                 double projection_distance = 0;
                 bool res = get_true_distance( cur_state_id,next_state_id, projection_distance );
                 if ( res ) {
-                    auto probability = 1 / betta * std::exp( -std::abs( observation_distance - projection_distance ) / betta );
+                    double probability = 1.;
+                    if ( betta != 0 ) {
+                        probability = 1 / betta * std::exp( -std::abs( observation_distance - projection_distance ) / betta );
+                    }
                     m_transaction_probabilities[ next_state_id ][ cur_state_id ] = probability;
                 }
             }
@@ -244,10 +245,9 @@ HMM::print_results( )
 void
 HMM::calculate_viterbi( )
 {
-    Viterbi decoder( m_observations, m_hidden_states, m_transaction_probabilities,
-                     m_emission_probabilities, m_start_probabilities);
-
-    decoder.calculate_viterbi();
+    Viterbi decoder;
+    decoder.calculate_viterbi( m_observations, m_hidden_states, m_transaction_probabilities,
+                               m_emission_probabilities, m_start_probabilities);
     m_most_probable_states = decoder.get_result( );
 }
 
@@ -279,8 +279,8 @@ HMM::print_matrix( std::vector< StateVector> matrix, std::string name )
 {
     std::cout << " Print " << name << " matrix: " << std::endl;
     std::cout << "--------------------------------------- " << std::endl;
-    for ( int i = 0; i < matrix.size( ); ++i ) {
-        for( int j = 0; j < matrix[i].size( ); ++j ) {
+    for ( std::size_t i = 0; i < matrix.size( ); ++i ) {
+        for( std::size_t j = 0; j < matrix[i].size( ); ++j ) {
             std::cout << matrix[i][j] << "  ";
         }
         std::cout <<  "]" << std::endl;

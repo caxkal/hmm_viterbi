@@ -1,5 +1,3 @@
-#pragma once
-
 #include "map.h"
 
 double
@@ -17,24 +15,24 @@ Map::get_closest_point( const Link& link, const GeoCoordinates& point)
     auto start = link.start_point;
     auto end = link.end_point;
 
-    auto APx = point.longitude - start.longitude;
-    auto APy = point.latitude - start.latitude;
-    auto ABx = end.longitude - start.longitude;
-    auto ABy = end.latitude - start.latitude;
-    auto dot = ABx * APx + ABy * APy;
-    double hy =   ABx* ABx + ABy * ABy ;
-    double t = dot / hy;
+    auto start_point_x = point.longitude - start.longitude;
+    auto start_point_y = point.latitude - start.latitude;
+    auto start_end_x = end.longitude - start.longitude;
+    auto start_end_y = end.latitude - start.latitude;
+    auto dot = start_end_x * start_point_x + start_end_y * start_point_y;
+    double hy =   start_end_x * start_end_x + start_end_y * start_end_y ;
+    double val = dot / hy;
 
     GeoCoordinates result;
-    if ( t < 0) {
+    if ( val < 0) {
         result.longitude = start.longitude;
         result.latitude = start.latitude;
-    } else if (t > 1) {
+    } else if (val > 1) {
         result.longitude = end.longitude;
         result.latitude = end.latitude;
     } else {
-        result.longitude = start.longitude + ABx * t;
-        result.latitude = start.latitude + ABy * t;
+        result.longitude = start.longitude + start_end_x * val;
+        result.latitude = start.latitude + start_end_y * val;
     }
 
     return result;

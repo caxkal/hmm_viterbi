@@ -26,10 +26,8 @@ struct Map
 
     double get_distance( const GeoCoordinates& start_point, const GeoCoordinates& end_point );
 
-    double get_geodesic_distance( )
-    {
-        // Todo: implement with harvesain formula
-    }
+    // Todo: implement with harvesain formula
+    // double get_geodesic_distance( );
 
     // todo implement geodesic version
     GeoCoordinates get_closest_point( const Link& link, const GeoCoordinates& point);

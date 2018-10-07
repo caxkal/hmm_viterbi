@@ -5,21 +5,16 @@
 
 #include "hmm.h"
 
-class Viterbi {
+class Viterbi
+{
 public:
-    Viterbi( std::vector< Observation > observations,
-             std::vector< State > hidden_states,
-             std::vector< StateVector > transaction_probabilities,
-             std::vector< StateVector > emission_probabilities,
-             std::vector< double > start_probabilities )
-        : m_observations( observations )
-        , m_hidden_states( hidden_states )
-        , m_transaction_probabilities( transaction_probabilities )
-        , m_emission_probabilities( emission_probabilities )
-        , m_start_probabilities( start_probabilities )
-    { }
+    Viterbi( ) = default;
 
-    void calculate_viterbi( );
+    void calculate_viterbi( const std::vector< Observation >& observations,
+                            const std::vector< State >& hidden_states,
+                            const std::vector< StateVector >& transaction_probabilities,
+                            const std::vector< StateVector >& emission_probabilities,
+                            const std::vector< double >& start_probabilities );
     std::vector< StateID > get_result( ) const;
 
 private:
@@ -27,12 +22,6 @@ private:
                                const StateVector&, double, double&, std::size_t& );
 
 public:
-    std::vector< Observation > m_observations;
-    std::vector< State > m_hidden_states;
-    std::vector< StateVector > m_transaction_probabilities;
-    std::vector< StateVector > m_emission_probabilities;
-    std::vector< double > m_start_probabilities;
-
      std::vector< StateID > m_most_probable_states;
 };
 
